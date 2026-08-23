@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "486635395952",
+    "project_id": "trackingservice-f817e",
+    "storage_bucket": "trackingservice-f817e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:486635395952:android:0ebe71dd0341b7a93e8db5",
+        "android_client_info": {
+          "package_name": "com.alwafa.device_tracking"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGf3G1Cq0FMQ9qiVeG6iBABfR-H_zm3Go"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

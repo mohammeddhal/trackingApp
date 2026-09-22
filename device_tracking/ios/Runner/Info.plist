@@ -68,5 +68,7 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+		<string>يحتاج التطبيق إذن استخدام الكاميرا لمسح باركود ورقم تسلسلي للأجهزة المستلمة</string>
 	</dict>
 </plist>

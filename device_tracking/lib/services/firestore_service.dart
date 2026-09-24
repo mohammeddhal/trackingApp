@@ -16,6 +16,10 @@ class FirestoreService {
     return null;
   }
 
+  Future<void> createUserDocument(UserModel user) async {
+    await _db.collection('users').doc(user.id).set(user.toMap());
+  }
+
   Stream<UserModel?> getUserStream(String uid) {
     return _db.collection('users').doc(uid).snapshots().map((doc) {
       if (doc.exists && doc.data() != null) {

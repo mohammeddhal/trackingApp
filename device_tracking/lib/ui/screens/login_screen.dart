@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/services_provider.dart';
 import 'package:device_tracking/l10n/generated/app_localizations.dart';
-
+import '../../models/user_model.dart';
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -34,6 +34,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _passwordController.text.trim(),
       );
       // GoRouter will automatically redirect to home if auth state changes
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _quickLogin() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      final email = 'admin@alwafa.com';
+      final password = 'password123';
+      try {
+        await authService.signInWithEmailAndPassword(email, password);
+      } catch (e) {
+        // If user doesn't exist, create it!
+        final cred = await authService.createUserWithEmailAndPassword(email, password);
+        if (cred.user != null) {
+          final firestore = ref.read(firestoreServiceProvider);
+          await firestore.createUserDocument(UserModel(
+            id: cred.user!.uid,
+            name: 'Admin User',
+            role: 'admin',
+          ));
+        }
+      }
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
@@ -139,6 +176,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : const Text(
                               'دخول (Login)',
                               style: TextStyle(fontSize: 18),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 50,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.grey),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _isLoading ? null : _quickLogin,
+                      child: _isLoading
+                          ? const CircularProgressIndicator()
+                          : const Text(
+                              'دخول سريع للتجربة (Admin Login Bypass)',
+                              style: TextStyle(fontSize: 16, color: Colors.grey),
                             ),
                     ),
                   ),

@@ -7,14 +7,16 @@ import 'providers/locale_provider.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 import 'services/notification_service.dart';
-
+import 'firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) => throw UnimplementedError());
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Automatically reads google-services.json on Android
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await NotificationService().init();
   final prefs = await SharedPreferences.getInstance();
 

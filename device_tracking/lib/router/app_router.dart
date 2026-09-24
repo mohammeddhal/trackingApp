@@ -15,13 +15,14 @@ import '../main.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
-  final hasLanguage = prefs.getString('selected_locale') != null;
+  final initialHasLanguage = prefs.getString('selected_locale') != null;
 
   return GoRouter(
-    initialLocation: hasLanguage ? (authState.value != null ? '/' : '/login') : '/language',
+    initialLocation: initialHasLanguage ? (authState.value != null ? '/' : '/login') : '/language',
     redirect: (context, state) {
       if (authState.isLoading) return null;
 
+      final hasLanguage = prefs.getString('selected_locale') != null;
       final isAuth = authState.value != null;
       final isLoggingIn = state.matchedLocation == '/login';
       final isLanguageSelect = state.matchedLocation == '/language';

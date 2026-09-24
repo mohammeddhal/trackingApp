@@ -64,7 +64,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
-  flutter_native_splash: ^2.4.4
+  flutter_native_splash: ^2.4.8
 flutter:
   generate: true
 
@@ -103,6 +103,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+dependency_overrides:
+  archive: ^4.0.2
 
 flutter_launcher_icons:
   android: "launcher_icon"

@@ -34,8 +34,8 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAGf3G1Cq0FMQ9qiVeG6iBABfR-H_zm3Go',
-    // Using Android App ID as a workaround since iOS App ID is unknown
-    appId: '1:486635395952:android:0ebe71dd0341b7a93e8db5',
+    // Spoofing the iOS App ID format so Firebase iOS SDK does not crash
+    appId: '1:486635395952:ios:0ebe71dd0341b7a93e8db5',
     messagingSenderId: '486635395952',
     projectId: 'trackingservice-f817e',
     storageBucket: 'trackingservice-f817e.firebasestorage.app',

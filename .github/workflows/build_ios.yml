@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -36,10 +38,20 @@ jobs:
           mkdir -p build/ios/ipa/Payload
           cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
-          zip -qr device_tracking.ipa Payload
+          zip -qry device_tracking.ipa Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: device_tracking_ipa
           path: device_tracking/build/ios/ipa/device_tracking.ipa
+
+      - name: Release IPA directly
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          name: "Latest iOS Release (Direct IPA)"
+          files: device_tracking/build/ios/ipa/device_tracking.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

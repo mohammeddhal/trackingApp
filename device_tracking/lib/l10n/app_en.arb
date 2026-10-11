@@ -62,5 +62,14 @@
   "customerApprovedBtn": "Customer Approved",
   "customerRejectedBtn": "Customer Rejected",
   "deliverToStoreBtn": "Deliver to Store",
-  "receiverNameDialogTitle": "Receiver Name"
+  "receiverNameDialogTitle": "Receiver Name",
+  "receivedFromMaintenanceTab": "Received from Maintenance",
+  "receivedFromMaintenanceBtn": "Received from Maintenance",
+  "confirmDeliveryToBranchBtn": "Confirm Delivery to Branch",
+  "scanInvoiceBtn": "Smart Invoice OCR Scan",
+  "visualInspectionBtn": "Inspect Phone Damages Visually",
+  "sendOutOfWarrantyWhatsapp": "Send WhatsApp to Branch",
+  "attachPdfReport": "Attach Maintenance PDF Report",
+  "outOfWarrantyReason": "Out of Warranty Reason",
+  "repairCost": "Repair Cost"
 }

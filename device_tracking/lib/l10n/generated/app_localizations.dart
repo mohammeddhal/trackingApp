@@ -475,6 +475,60 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'اسم المستلم'**
   String get receiverNameDialogTitle;
+
+  /// No description provided for @receivedFromMaintenanceTab.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأجهزة المستلمة من الصيانة'**
+  String get receivedFromMaintenanceTab;
+
+  /// No description provided for @receivedFromMaintenanceBtn.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم استلام الجهاز من الصيانة'**
+  String get receivedFromMaintenanceBtn;
+
+  /// No description provided for @confirmDeliveryToBranchBtn.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد تسليم الجهاز للفرع'**
+  String get confirmDeliveryToBranchBtn;
+
+  /// No description provided for @scanInvoiceBtn.
+  ///
+  /// In ar, this message translates to:
+  /// **'التعرف الذكي على الفاتورة (OCR)'**
+  String get scanInvoiceBtn;
+
+  /// No description provided for @visualInspectionBtn.
+  ///
+  /// In ar, this message translates to:
+  /// **'فحص وتحديد الخدوش على رسم الجوال'**
+  String get visualInspectionBtn;
+
+  /// No description provided for @sendOutOfWarrantyWhatsapp.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال رسالة واتساب للفرع'**
+  String get sendOutOfWarrantyWhatsapp;
+
+  /// No description provided for @attachPdfReport.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرفاق تقرير الصيانة (PDF)'**
+  String get attachPdfReport;
+
+  /// No description provided for @outOfWarrantyReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب خروج الجهاز من الضمان'**
+  String get outOfWarrantyReason;
+
+  /// No description provided for @repairCost.
+  ///
+  /// In ar, this message translates to:
+  /// **'تكلفة الإصلاح'**
+  String get repairCost;
 }
 
 class _AppLocalizationsDelegate

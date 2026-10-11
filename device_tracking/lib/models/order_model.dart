@@ -25,6 +25,11 @@ class OrderModel {
   final String? handoverNotes;
   final String? serviceCenterOrderNumber;
   final String? serviceCenterName;
+  final String? outOfWarrantyReason;
+  final String? repairCost;
+  final String? maintenancePdfUrl;
+  final String? visualInspectionData;
+  final DateTime? receivedFromMaintenanceDate;
 
   OrderModel({
     required this.id,
@@ -51,6 +56,11 @@ class OrderModel {
     this.handoverNotes,
     this.serviceCenterOrderNumber,
     this.serviceCenterName,
+    this.outOfWarrantyReason,
+    this.repairCost,
+    this.maintenancePdfUrl,
+    this.visualInspectionData,
+    this.receivedFromMaintenanceDate,
   });
 
   factory OrderModel.fromMap(Map<String, dynamic> map, String documentId) {
@@ -80,6 +90,11 @@ class OrderModel {
       handoverNotes: map['handoverNotes'],
       serviceCenterOrderNumber: map['serviceCenterOrderNumber'],
       serviceCenterName: map['serviceCenterName'],
+      outOfWarrantyReason: map['outOfWarrantyReason'],
+      repairCost: map['repairCost']?.toString(),
+      maintenancePdfUrl: map['maintenancePdfUrl'],
+      visualInspectionData: map['visualInspectionData'],
+      receivedFromMaintenanceDate: (map['receivedFromMaintenanceDate'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -108,6 +123,11 @@ class OrderModel {
       if (handoverNotes != null) 'handoverNotes': handoverNotes,
       if (serviceCenterOrderNumber != null) 'serviceCenterOrderNumber': serviceCenterOrderNumber,
       if (serviceCenterName != null) 'serviceCenterName': serviceCenterName,
+      if (outOfWarrantyReason != null) 'outOfWarrantyReason': outOfWarrantyReason,
+      if (repairCost != null) 'repairCost': repairCost,
+      if (maintenancePdfUrl != null) 'maintenancePdfUrl': maintenancePdfUrl,
+      if (visualInspectionData != null) 'visualInspectionData': visualInspectionData,
+      if (receivedFromMaintenanceDate != null) 'receivedFromMaintenanceDate': receivedFromMaintenanceDate,
     };
   }
 

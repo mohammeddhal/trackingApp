@@ -62,5 +62,14 @@
   "customerApprovedBtn": "موافقة العميل",
   "customerRejectedBtn": "رفض العميل",
   "deliverToStoreBtn": "تسليم الجهاز للمتجر",
-  "receiverNameDialogTitle": "اسم المستلم"
+  "receiverNameDialogTitle": "اسم المستلم",
+  "receivedFromMaintenanceTab": "الأجهزة المستلمة من الصيانة",
+  "receivedFromMaintenanceBtn": "تم استلام الجهاز من الصيانة",
+  "confirmDeliveryToBranchBtn": "تأكيد تسليم الجهاز للفرع",
+  "scanInvoiceBtn": "التعرف الذكي على الفاتورة (OCR)",
+  "visualInspectionBtn": "فحص وتحديد الخدوش على رسم الجوال",
+  "sendOutOfWarrantyWhatsapp": "إرسال رسالة واتساب للفرع",
+  "attachPdfReport": "إرفاق تقرير الصيانة (PDF)",
+  "outOfWarrantyReason": "سبب خروج الجهاز من الضمان",
+  "repairCost": "تكلفة الإصلاح"
 }

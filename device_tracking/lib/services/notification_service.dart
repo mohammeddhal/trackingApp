@@ -92,6 +92,34 @@ class NotificationService {
     );
   }
 
+  Future<void> scheduleDailyDeliveryReminder(String orderId, String orderNumber) async {
+    final int notifId = orderId.hashCode.abs() + 300000;
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, 10, 0);
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    await _notificationsPlugin.zonedSchedule(
+      id: notifId,
+      title: 'تذكير بتسليم الجهاز للفرع 📦',
+      body: 'الجهاز رقم $orderNumber مستلم من الصيانة وبانتظار تسليمه للفرع.',
+      scheduledDate: scheduledDate,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'daily_delivery_reminder',
+          'Daily Delivery Reminders',
+          channelDescription: 'Daily reminder for devices received from maintenance awaiting branch handover',
+          importance: Importance.max,
+          priority: Priority.high,
+          icon: '@mipmap/launcher_icon',
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
   Future<void> cancelMaintenanceDelays(String orderId) async {
     await _notificationsPlugin.cancel(id: orderId.hashCode.abs());
     await _notificationsPlugin.cancel(id: orderId.hashCode.abs() + 100000);
@@ -99,5 +127,9 @@ class NotificationService {
 
   Future<void> cancelBranchDelays(String orderId) async {
     await _notificationsPlugin.cancel(id: orderId.hashCode.abs() + 200000);
+  }
+
+  Future<void> cancelDailyDeliveryReminder(String orderId) async {
+    await _notificationsPlugin.cancel(id: orderId.hashCode.abs() + 300000);
   }
 }

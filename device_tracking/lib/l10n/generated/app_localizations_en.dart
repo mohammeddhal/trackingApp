@@ -197,4 +197,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get receiverNameDialogTitle => 'Receiver Name';
+
+  @override
+  String get receivedFromMaintenanceTab => 'Received from Maintenance';
+
+  @override
+  String get receivedFromMaintenanceBtn => 'Received from Maintenance';
+
+  @override
+  String get confirmDeliveryToBranchBtn => 'Confirm Delivery to Branch';
+
+  @override
+  String get scanInvoiceBtn => 'Smart Invoice OCR Scan';
+
+  @override
+  String get visualInspectionBtn => 'Inspect Phone Damages Visually';
+
+  @override
+  String get sendOutOfWarrantyWhatsapp => 'Send WhatsApp to Branch';
+
+  @override
+  String get attachPdfReport => 'Attach Maintenance PDF Report';
+
+  @override
+  String get outOfWarrantyReason => 'Out of Warranty Reason';
+
+  @override
+  String get repairCost => 'Repair Cost';
 }

@@ -102,6 +102,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                   loc: loc,
                 ),
                 _buildSection(
+                  title: loc.receivedFromMaintenanceTab,
+                  icon: Icons.inventory_2,
+                  color: Colors.teal,
+                  status: 'received_from_maintenance',
+                  orders: filteredOrders,
+                  loc: loc,
+                  initiallyExpanded: true,
+                ),
+                _buildSection(
                   title: loc.completed,
                   icon: Icons.check_circle,
                   color: Colors.green,

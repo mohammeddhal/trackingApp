@@ -197,4 +197,31 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get receiverNameDialogTitle => 'اسم المستلم';
+
+  @override
+  String get receivedFromMaintenanceTab => 'الأجهزة المستلمة من الصيانة';
+
+  @override
+  String get receivedFromMaintenanceBtn => 'تم استلام الجهاز من الصيانة';
+
+  @override
+  String get confirmDeliveryToBranchBtn => 'تأكيد تسليم الجهاز للفرع';
+
+  @override
+  String get scanInvoiceBtn => 'التعرف الذكي على الفاتورة (OCR)';
+
+  @override
+  String get visualInspectionBtn => 'فحص وتحديد الخدوش على رسم الجوال';
+
+  @override
+  String get sendOutOfWarrantyWhatsapp => 'إرسال رسالة واتساب للفرع';
+
+  @override
+  String get attachPdfReport => 'إرفاق تقرير الصيانة (PDF)';
+
+  @override
+  String get outOfWarrantyReason => 'سبب خروج الجهاز من الضمان';
+
+  @override
+  String get repairCost => 'تكلفة الإصلاح';
 }

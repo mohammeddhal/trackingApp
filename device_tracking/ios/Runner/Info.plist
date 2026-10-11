@@ -69,6 +69,8 @@
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<key>NSCameraUsageDescription</key>
-		<string>يحتاج التطبيق إذن استخدام الكاميرا لمسح باركود ورقم تسلسلي للأجهزة المستلمة</string>
+		<string>يحتاج التطبيق إذن استخدام الكاميرا لمسح باركود ورقم تسلسلي وفواتير الأجهزة المستلمة</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>يحتاج التطبيق إذن الوصول للصور لاختيار صور الفواتير والتقارير</string>
 	</dict>
 </plist>

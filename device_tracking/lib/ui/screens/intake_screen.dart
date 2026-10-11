@@ -1,11 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:device_tracking/l10n/generated/app_localizations.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../providers/branch_provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../services/notification_service.dart';
+import '../../services/invoice_ocr_service.dart';
+import '../widgets/phone_inspection_widget.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
 import '../../models/order_model.dart';
@@ -43,6 +47,8 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
   String? _selectedDeviceType;
   String? _selectedManufacturerDropdown;
   bool _isLoading = false;
+  bool _isScanningInvoice = false;
+  String? _visualInspectionData;
   DateTime _receivedDate = DateTime.now();
 
   final List<String> _deviceTypes = [
@@ -89,6 +95,7 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
       _selectedBranch = o.branchId;
       _selectedDeviceType = o.deviceType;
       _receivedDate = o.receivedFromCustomerDate;
+      _visualInspectionData = o.visualInspectionData;
 
       if (_manufacturers.contains(o.manufacturer)) {
         _selectedManufacturerDropdown = o.manufacturer;
@@ -110,6 +117,182 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
       setState(() {
         _receivedDate = date;
       });
+    }
+  }
+
+  Future<void> _showInvoicePickerOptions() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'التعرف التلقائي على الفاتورة (OCR)',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'اختر طريقة تصوير أو جلب الفاتورة لاستخراج البيانات آلياً:',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.indigo.shade50, borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.camera_alt, color: Colors.indigo),
+                ),
+                title: const Text('التقاط صورة بالفاتورة عبر الكاميرا', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text('تصوير فاتورة/إيصال الاستلام مباشرة'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _scanInvoice(ImageSource.camera);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.photo_library, color: Colors.teal),
+                ),
+                title: const Text('اختيار صورة الفاتورة من الاستوديو', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text('جلب صورة الفاتورة المحفوظة في الجهاز'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _scanInvoice(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _scanInvoice(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: source);
+      if (pickedFile == null) return;
+
+      setState(() => _isScanningInvoice = true);
+
+      final extracted = await InvoiceOcrService().extractFromImageFile(File(pickedFile.path));
+
+      int fieldsCount = 0;
+
+      // 1. Service Ticket
+      if (extracted.serviceTicket != null && extracted.serviceTicket!.isNotEmpty) {
+        _orderNumberController.text = extracted.serviceTicket!;
+        fieldsCount++;
+      }
+
+      // 2. Device Details / Product Name
+      if (extracted.deviceName != null && extracted.deviceName!.isNotEmpty) {
+        _productNameController.text = extracted.deviceName!;
+        fieldsCount++;
+      }
+
+      // 3. Category / Device Type
+      if (extracted.category != null && _deviceTypes.contains(extracted.category)) {
+        _selectedDeviceType = extracted.category;
+        fieldsCount++;
+      }
+
+      // 4. Serial # / IMEI
+      if (extracted.serialOrImei != null && extracted.serialOrImei!.isNotEmpty) {
+        _imeiController.text = extracted.serialOrImei!;
+        fieldsCount++;
+      }
+
+      // 5. Issue / Problem / Notes
+      if (extracted.issue != null && extracted.issue!.isNotEmpty) {
+        _problemController.text = extracted.issue!;
+        fieldsCount++;
+      }
+
+      // 6. Condition
+      if (extracted.condition != null && extracted.condition!.isNotEmpty) {
+        _conditionController.text = extracted.condition!;
+        fieldsCount++;
+      }
+
+      // 7. Deliverer / Customer Name
+      if (extracted.customerName != null && extracted.customerName!.isNotEmpty) {
+        _delivererController.text = extracted.customerName!;
+        fieldsCount++;
+      }
+
+      // 8. Manufacturer
+      if (extracted.manufacturer != null) {
+        if (_manufacturers.contains(extracted.manufacturer)) {
+          _selectedManufacturerDropdown = extracted.manufacturer;
+        } else {
+          _selectedManufacturerDropdown = 'Other';
+          _manufacturerController.text = extracted.manufacturer!;
+        }
+        fieldsCount++;
+      }
+
+      // 9. Accessories
+      if (extracted.accessories != null && extracted.accessories!.isNotEmpty) {
+        final accLower = extracted.accessories!.toLowerCase();
+        if (accLower.contains('charger') || accLower.contains('شاحن')) _accessories['شاحن'] = true;
+        if (accLower.contains('cable') || accLower.contains('كيبل')) _accessories['كيبل'] = true;
+        if (accLower.contains('box') || accLower.contains('كرتون')) _accessories['كرتون'] = true;
+
+        final notePrefix = 'المرفقات بالفاتورة: ${extracted.accessories!}';
+        if (_intakeNotesController.text.isEmpty) {
+          _intakeNotesController.text = notePrefix;
+        } else if (!_intakeNotesController.text.contains(extracted.accessories!)) {
+          _intakeNotesController.text += '\n$notePrefix';
+        }
+        fieldsCount++;
+      }
+
+      // 10. Customer Phone
+      if (extracted.customerPhone != null && extracted.customerPhone!.isNotEmpty) {
+        final phoneNote = 'هاتف العميل: ${extracted.customerPhone!}';
+        if (!_intakeNotesController.text.contains(extracted.customerPhone!)) {
+          _intakeNotesController.text += (_intakeNotesController.text.isEmpty ? '' : '\n') + phoneNote;
+        }
+      }
+
+      // 11. Branch Matching
+      if (extracted.branchName != null) {
+        final branches = ref.read(branchesProvider).value ?? [];
+        for (final b in branches) {
+          if (extracted.branchName!.toLowerCase().contains(b.name.toLowerCase()) ||
+              b.name.toLowerCase().contains(extracted.branchName!.toLowerCase())) {
+            _selectedBranch = b.id;
+            break;
+          }
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.green.shade700,
+            content: Text('تم استخراج $fieldsCount حقل من الفاتورة وتعبئتها بنجاح! 🎉'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ أثناء قراءة الفاتورة: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isScanningInvoice = false);
     }
   }
 
@@ -177,6 +360,7 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
         'delivererName': _delivererController.text.trim(),
         'intakeNotes': _intakeNotesController.text.trim(),
         'accessories': selectedAccessories,
+        'visualInspectionData': _visualInspectionData,
         'updatedAt': FieldValue.serverTimestamp(),
         'receivedFromCustomerDate': _receivedDate,
       };
@@ -233,6 +417,73 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Smart OCR Invoice Scanning Banner
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Theme.of(context).primaryColor, Colors.indigo.shade600],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.indigo.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                          child: const Icon(Icons.document_scanner, color: Colors.white, size: 26),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'التعرف الذكي على الفاتورة (OCR)',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'قراءة رقم التذكرة، اسم الجهاز، السيريال، والعطل تلقائياً',
+                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: _isScanningInvoice ? null : _showInvoicePickerOptions,
+                        icon: _isScanningInvoice
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.auto_awesome),
+                        label: Text(
+                          _isScanningInvoice ? 'جاري استخراج البيانات...' : 'مسح الفاتورة تلقائياً (كاميرا / صورة)',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -264,9 +515,9 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
                       InkWell(
                         onTap: _pickReceivedDate,
                         child: InputDecorator(
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: 'تاريخ استلام الجهاز من العميل',
-                            suffixIcon: const Icon(Icons.calendar_today),
+                            suffixIcon: Icon(Icons.calendar_today),
                           ),
                           child: Text(DateFormat('yyyy-MM-dd').format(_receivedDate), style: const TextStyle(fontSize: 16)),
                         ),
@@ -377,6 +628,38 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
                         decoration: InputDecoration(labelText: loc.deviceCondition),
                         maxLines: 3,
                         validator: (val) => val!.isEmpty ? loc.requiredField : null,
+                      ),
+                      const SizedBox(height: 10),
+                      // Visual phone inspection button
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.indigo,
+                          side: BorderSide(color: Colors.indigo.shade300),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        ),
+                        onPressed: () async {
+                          final result = await showDialog<Map<String, dynamic>>(
+                            context: context,
+                            builder: (ctx) => PhoneInspectionDialog(
+                              initialData: _visualInspectionData,
+                              initialConditionText: _conditionController.text,
+                            ),
+                          );
+                          if (result != null && mounted) {
+                            setState(() {
+                              _conditionController.text = result['summary'] ?? _conditionController.text;
+                              _visualInspectionData = result['data'];
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.draw, size: 20),
+                        label: Text(
+                          _visualInspectionData != null && _visualInspectionData!.isNotEmpty
+                              ? 'تعديل الفحص البصري للجوال (تم الحفظ ✔️)'
+                              : 'فحص وتحديد الخدوش على رسم الجوال 📱',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(

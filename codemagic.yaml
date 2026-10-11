@@ -71,10 +71,7 @@ workflows:
         script: |
           cd device_tracking
           flutter packages pub get
-      - name: Pod install
-        script: |
-          cd device_tracking/ios
-          pod install
+          flutter build ios --config-only
       - name: Build iOS IPA for App Store
         script: |
           cd device_tracking

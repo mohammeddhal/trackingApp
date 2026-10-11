@@ -45,3 +45,4 @@ app.*.map.json
 # iOS
 **/ios/Pods/
 **/ios/.symlinks/
+ipa_output/

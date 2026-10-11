@@ -15,6 +15,9 @@ workflows:
           include: true
           source: true
     scripts:
+      - name: Disable SPM
+        script: |
+          flutter config --no-enable-swift-package-manager
       - name: Set up Flutter dependencies
         script: |
           cd device_tracking
@@ -29,6 +32,47 @@ workflows:
           mkdir -p build/ios/ipa/Payload
           cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
-          zip -qr device_tracking.ipa Payload
+          zip -qry device_tracking.ipa Payload
     artifacts:
       - device_tracking/build/ios/ipa/*.ipa
+
+  ios-testflight:
+    name: iOS TestFlight Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: codemagic
+    environment:
+      flutter: default
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.alwafa.deviceTracking
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: true
+    scripts:
+      - name: Disable SPM
+        script: |
+          flutter config --no-enable-swift-package-manager
+      - name: Set up Flutter dependencies
+        script: |
+          cd device_tracking
+          flutter packages pub get
+      - name: Build iOS IPA for App Store
+        script: |
+          cd device_tracking
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - device_tracking/build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+

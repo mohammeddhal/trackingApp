@@ -9,6 +9,8 @@ import '../ui/screens/intake_screen.dart';
 import '../ui/screens/orders_screen.dart';
 import '../ui/screens/branches_screen.dart';
 import '../ui/screens/order_details_screen.dart';
+import '../ui/screens/reports_screen.dart';
+import '../ui/screens/staff_screen.dart';
 import '../models/order_model.dart';
 import '../main.dart';
 
@@ -68,6 +70,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           final order = state.extra as OrderModel;
           return OrderDetailsScreen(order: order);
         },
+      ),
+      GoRoute(
+        path: '/reports',
+        builder: (context, state) => const ReportsScreen(),
+      ),
+      GoRoute(
+        path: '/staff',
+        builder: (context, state) => const StaffScreen(),
       ),
     ],
   );

@@ -13,3 +13,7 @@ final currentUserModelProvider = StreamProvider<UserModel?>((ref) {
   
   return ref.watch(firestoreServiceProvider).getUserStream(user.uid);
 });
+
+final allUsersProvider = StreamProvider<List<UserModel>>((ref) {
+  return ref.watch(firestoreServiceProvider).getAllUsersStream();
+});

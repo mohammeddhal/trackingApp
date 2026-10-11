@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:device_tracking/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/services_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -9,6 +11,8 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = AppLocalizations.of(context)!;
+    final userAsync = ref.watch(currentUserModelProvider);
+    final user = userAsync.value;
     
     return Scaffold(
       appBar: AppBar(
@@ -20,6 +24,30 @@ class HomeScreen extends ConsumerWidget {
             tooltip: 'تغيير اللغة',
             onPressed: () => context.push('/language'),
           ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'تسجيل الخروج',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('تسجيل الخروج'),
+                  content: const Text('هل أنت متأكد من رغبتك في تسجيل الخروج؟'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('تسجيل خروج'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await ref.read(authServiceProvider).signOut();
+              }
+            },
+          ),
         ],
       ),
       body: Container(
@@ -27,30 +55,43 @@ class HomeScreen extends ConsumerWidget {
           color: Theme.of(context).scaffoldBackgroundColor,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'لوحة التحكم',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'لوحة التحكم',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      if (user != null)
+                        Text(
+                          'المستخدم: ${user.name} (${user.isAdmin ? 'مدير' : 'موظف'})${user.region != null ? ' - ${user.region}' : ''}',
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'اختر الإجراء المطلوب من القائمة أدناه',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
                   children: [
                     _buildDashboardCard(
                       context,
@@ -72,6 +113,13 @@ class HomeScreen extends ConsumerWidget {
                       icon: Icons.storefront_rounded,
                       color: const Color(0xFFE65100),
                       onTap: () => context.push('/branches'),
+                    ),
+                    _buildDashboardCard(
+                      context,
+                      title: 'إدارة ومتابعة الموظفين',
+                      icon: Icons.people_alt_rounded,
+                      color: Colors.indigo,
+                      onTap: () => context.push('/staff'),
                     ),
                     _buildDashboardCard(
                       context,

@@ -29,6 +29,24 @@ class FirestoreService {
     });
   }
 
+  Stream<List<UserModel>> getAllUsersStream() {
+    return _db.collection('users').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => UserModel.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  Future<void> updateUser(UserModel user) async {
+    await _db.collection('users').doc(user.id).update(user.toMap());
+  }
+
+  Future<void> toggleUserStatus(String uid, bool isActive) async {
+    await _db.collection('users').doc(uid).update({'isActive': isActive});
+  }
+
+  Future<void> deleteUser(String uid) async {
+    await _db.collection('users').doc(uid).delete();
+  }
+
   // Branches
   Stream<List<Branch>> getBranches() {
     return _db.collection('branches').where('isActive', isEqualTo: true).snapshots().map((snapshot) {

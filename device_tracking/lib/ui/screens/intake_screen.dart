@@ -188,100 +188,131 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
 
       int fieldsCount = 0;
 
-      // 1. Service Ticket
-      if (extracted.serviceTicket != null && extracted.serviceTicket!.isNotEmpty) {
-        _orderNumberController.text = extracted.serviceTicket!;
-        fieldsCount++;
-      }
+      // 11. Smart Branch Matching across entire invoice text
+      final branches = ref.read(branchesProvider).value ?? [];
+      String? matchedBranchId;
+      String? matchedBranchName;
+      final fullTextLower = '${extracted.branchName ?? ''} ${extracted.rawText}'.toLowerCase();
 
-      // 2. Device Details / Product Name
-      if (extracted.deviceName != null && extracted.deviceName!.isNotEmpty) {
-        _productNameController.text = extracted.deviceName!;
-        fieldsCount++;
-      }
+      for (final b in branches) {
+        final bName = b.name.trim();
+        if (bName.isEmpty) continue;
+        final bNameLower = bName.toLowerCase();
 
-      // 3. Category / Device Type
-      if (extracted.category != null && _deviceTypes.contains(extracted.category)) {
-        _selectedDeviceType = extracted.category;
-        fieldsCount++;
-      }
-
-      // 4. Serial # / IMEI
-      if (extracted.serialOrImei != null && extracted.serialOrImei!.isNotEmpty) {
-        _imeiController.text = extracted.serialOrImei!;
-        fieldsCount++;
-      }
-
-      // 5. Issue / Problem / Notes
-      if (extracted.issue != null && extracted.issue!.isNotEmpty) {
-        _problemController.text = extracted.issue!;
-        fieldsCount++;
-      }
-
-      // 6. Condition
-      if (extracted.condition != null && extracted.condition!.isNotEmpty) {
-        _conditionController.text = extracted.condition!;
-        fieldsCount++;
-      }
-
-      // 7. Deliverer / Customer Name
-      if (extracted.customerName != null && extracted.customerName!.isNotEmpty) {
-        _delivererController.text = extracted.customerName!;
-        fieldsCount++;
-      }
-
-      // 8. Manufacturer
-      if (extracted.manufacturer != null) {
-        if (_manufacturers.contains(extracted.manufacturer)) {
-          _selectedManufacturerDropdown = extracted.manufacturer;
-        } else {
-          _selectedManufacturerDropdown = 'Other';
-          _manufacturerController.text = extracted.manufacturer!;
+        // Direct containment
+        if (fullTextLower.contains(bNameLower)) {
+          matchedBranchId = b.id;
+          matchedBranchName = b.name;
+          break;
         }
-        fieldsCount++;
-      }
 
-      // 9. Accessories
-      if (extracted.accessories != null && extracted.accessories!.isNotEmpty) {
-        final accLower = extracted.accessories!.toLowerCase();
-        if (accLower.contains('charger') || accLower.contains('شاحن')) _accessories['شاحن'] = true;
-        if (accLower.contains('cable') || accLower.contains('كيبل')) _accessories['كيبل'] = true;
-        if (accLower.contains('box') || accLower.contains('كرتون')) _accessories['كرتون'] = true;
+        // Clean common prefixes/suffixes and check keywords
+        final cleanWords = bNameLower
+            .split(RegExp(r'[\s\-_/]+'))
+            .where((w) => w.length >= 3 && !['فرع', 'محل', 'متجر', 'branch', 'store', 'hypermarket', 'supermarket', 'nesto', 'هايبر'].contains(w))
+            .toList();
 
-        final notePrefix = 'المرفقات بالفاتورة: ${extracted.accessories!}';
-        if (_intakeNotesController.text.isEmpty) {
-          _intakeNotesController.text = notePrefix;
-        } else if (!_intakeNotesController.text.contains(extracted.accessories!)) {
-          _intakeNotesController.text += '\n$notePrefix';
-        }
-        fieldsCount++;
-      }
-
-      // 10. Customer Phone
-      if (extracted.customerPhone != null && extracted.customerPhone!.isNotEmpty) {
-        final phoneNote = 'هاتف العميل: ${extracted.customerPhone!}';
-        if (!_intakeNotesController.text.contains(extracted.customerPhone!)) {
-          _intakeNotesController.text += (_intakeNotesController.text.isEmpty ? '' : '\n') + phoneNote;
-        }
-      }
-
-      // 11. Branch Matching
-      if (extracted.branchName != null) {
-        final branches = ref.read(branchesProvider).value ?? [];
-        for (final b in branches) {
-          if (extracted.branchName!.toLowerCase().contains(b.name.toLowerCase()) ||
-              b.name.toLowerCase().contains(extracted.branchName!.toLowerCase())) {
-            _selectedBranch = b.id;
+        for (final word in cleanWords) {
+          if (fullTextLower.contains(word)) {
+            matchedBranchId = b.id;
+            matchedBranchName = b.name;
             break;
           }
         }
+        if (matchedBranchId != null) break;
       }
 
+      setState(() {
+        // 1. Service Ticket
+        if (extracted.serviceTicket != null && extracted.serviceTicket!.isNotEmpty) {
+          _orderNumberController.text = extracted.serviceTicket!;
+          fieldsCount++;
+        }
+
+        // 2. Device Details / Product Name
+        if (extracted.deviceName != null && extracted.deviceName!.isNotEmpty) {
+          _productNameController.text = extracted.deviceName!;
+          fieldsCount++;
+        }
+
+        // 3. Category / Device Type
+        if (extracted.category != null && _deviceTypes.contains(extracted.category)) {
+          _selectedDeviceType = extracted.category;
+          fieldsCount++;
+        }
+
+        // 4. Serial # / IMEI
+        if (extracted.serialOrImei != null && extracted.serialOrImei!.isNotEmpty) {
+          _imeiController.text = extracted.serialOrImei!;
+          fieldsCount++;
+        }
+
+        // 5. Issue / Problem / Notes
+        if (extracted.issue != null && extracted.issue!.isNotEmpty) {
+          _problemController.text = extracted.issue!;
+          fieldsCount++;
+        }
+
+        // 6. Condition
+        if (extracted.condition != null && extracted.condition!.isNotEmpty) {
+          _conditionController.text = extracted.condition!;
+          fieldsCount++;
+        }
+
+        // 7. Deliverer / Customer Name
+        if (extracted.customerName != null && extracted.customerName!.isNotEmpty) {
+          _delivererController.text = extracted.customerName!;
+          fieldsCount++;
+        }
+
+        // 8. Manufacturer
+        if (extracted.manufacturer != null) {
+          if (_manufacturers.contains(extracted.manufacturer)) {
+            _selectedManufacturerDropdown = extracted.manufacturer;
+          } else {
+            _selectedManufacturerDropdown = 'Other';
+            _manufacturerController.text = extracted.manufacturer!;
+          }
+          fieldsCount++;
+        }
+
+        // 9. Accessories
+        if (extracted.accessories != null && extracted.accessories!.isNotEmpty) {
+          final accLower = extracted.accessories!.toLowerCase();
+          if (accLower.contains('charger') || accLower.contains('شاحن')) _accessories['شاحن'] = true;
+          if (accLower.contains('cable') || accLower.contains('كيبل')) _accessories['كيبل'] = true;
+          if (accLower.contains('box') || accLower.contains('كرتون')) _accessories['كرتون'] = true;
+
+          final notePrefix = 'المرفقات بالفاتورة: ${extracted.accessories!}';
+          if (_intakeNotesController.text.isEmpty) {
+            _intakeNotesController.text = notePrefix;
+          } else if (!_intakeNotesController.text.contains(extracted.accessories!)) {
+            _intakeNotesController.text += '\n$notePrefix';
+          }
+          fieldsCount++;
+        }
+
+        // 10. Customer Phone
+        if (extracted.customerPhone != null && extracted.customerPhone!.isNotEmpty) {
+          final phoneNote = 'هاتف العميل: ${extracted.customerPhone!}';
+          if (!_intakeNotesController.text.contains(extracted.customerPhone!)) {
+            _intakeNotesController.text += (_intakeNotesController.text.isEmpty ? '' : '\n') + phoneNote;
+          }
+        }
+
+        // 11. Branch
+        if (matchedBranchId != null) {
+          _selectedBranch = matchedBranchId;
+          fieldsCount++;
+        }
+      });
+
       if (mounted) {
+        final branchMsg = matchedBranchName != null ? ' (تم تحديد: $matchedBranchName)' : '';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.green.shade700,
-            content: Text('تم استخراج $fieldsCount حقل من الفاتورة وتعبئتها بنجاح! 🎉'),
+            content: Text('تم استخراج $fieldsCount حقل من الفاتورة$branchMsg وتعبئتها بنجاح! 🎉'),
           ),
         );
       }

@@ -83,13 +83,44 @@ class InvoiceOcrService {
     }
 
     // 1. Service Ticket
-    serviceTicket = findValue(['Service Ticket', 'ServiceTicket', 'Ticket', 'رقم التذكرة', 'رقم الطلب']);
-    if (serviceTicket == null) {
-      // Look for regex pattern like SRV-2026-8433
-      final ticketRegex = RegExp(r'\b(SRV[-\w\d]+)\b', caseSensitive: false);
+    String? rawTicket = findValue(['Service Ticket', 'ServiceTicket', 'Ticket', 'رقم التذكرة', 'رقم الطلب', 'Order No', 'Order #']);
+    if (rawTicket == null) {
+      // Look for regex pattern like SRV-2026-8433 or SRV-2026-0000
+      final ticketRegex = RegExp(r'\b(SRV[-\s\w\d]+)\b', caseSensitive: false);
       final match = ticketRegex.firstMatch(rawText);
       if (match != null) {
-        serviceTicket = match.group(1);
+        rawTicket = match.group(1);
+      }
+    }
+
+    // Clean and extract the last 4 or 5 digits (e.g. from SRV-2026-0000 -> 0000)
+    if (rawTicket != null) {
+      final trimmedTicket = rawTicket.trim();
+      // If it contains dashes or slashes or spaces, check the last segment
+      final segments = trimmedTicket.split(RegExp(r'[-/_\s]+'));
+      String? lastSegmentDigits;
+      if (segments.length > 1) {
+        final last = segments.last.replaceAll(RegExp(r'\D'), '');
+        if (last.isNotEmpty) {
+          lastSegmentDigits = last.length > 5 ? last.substring(last.length - 4) : last;
+        }
+      }
+
+      if (lastSegmentDigits != null && lastSegmentDigits.isNotEmpty) {
+        serviceTicket = lastSegmentDigits;
+      } else {
+        // Find trailing group of 4-5 digits
+        final trailingDigits = RegExp(r'(\d{4,5})\b').allMatches(trimmedTicket).toList();
+        if (trailingDigits.isNotEmpty) {
+          serviceTicket = trailingDigits.last.group(1);
+        } else {
+          final allDigits = trimmedTicket.replaceAll(RegExp(r'\D'), '');
+          if (allDigits.length >= 4) {
+            serviceTicket = allDigits.substring(allDigits.length - (allDigits.length >= 5 ? 4 : allDigits.length));
+          } else {
+            serviceTicket = trimmedTicket;
+          }
+        }
       }
     }
 

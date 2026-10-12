@@ -76,10 +76,15 @@ workflows:
       - name: Build iOS IPA for App Store
         script: |
           cd device_tracking
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist
+          flutter build ios --release --no-codesign
+          xcode-project build-ipa \
+            --workspace ios/Runner.xcworkspace \
+            --scheme Runner
     artifacts:
+      - build/ios/ipa/*.ipa
       - device_tracking/build/ios/ipa/*.ipa
+      - /Users/builder/clone/build/ios/ipa/*.ipa
+      - /Users/builder/clone/device_tracking/build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
         auth: integration

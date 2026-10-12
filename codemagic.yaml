@@ -67,10 +67,12 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
+          ssh-keygen -t rsa -b 2048 -m PEM -f /Users/builder/cert_key -q -N ""
           app-store-connect fetch-signing-files "com.alwafa.deviceTracking" \
             --type IOS_APP_STORE \
-            --create
-          keychain add-certificates
+            --create \
+            --certificate-key=@file:/Users/builder/cert_key
+          keychain add-certificates --certificate-key=/Users/builder/cert_key
       - name: Build iOS IPA for App Store
         script: |
           cd device_tracking

@@ -71,14 +71,14 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          cd device_tracking/ios
-          xcode-project use-profiles --archive-method app-store --export-options-plist /Users/builder/export_options.plist
       - name: Build iOS IPA for App Store
         script: |
           cd device_tracking
           flutter build ios --release --no-codesign
+          cd ios
+          xcode-project use-profiles --archive-method app-store --export-options-plist /Users/builder/export_options.plist --code-signing-setup-verbose-logging
           xcode-project build-ipa \
-            --workspace ios/Runner.xcworkspace \
+            --workspace Runner.xcworkspace \
             --scheme Runner
     artifacts:
       - build/ios/ipa/*.ipa

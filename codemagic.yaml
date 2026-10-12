@@ -59,6 +59,11 @@ workflows:
       - name: Disable SPM
         script: |
           flutter config --no-enable-swift-package-manager
+      - name: Set up Flutter dependencies
+        script: |
+          cd device_tracking
+          flutter packages pub get
+          flutter build ios --config-only
       - name: Set up code signing
         script: |
           keychain initialize
@@ -66,12 +71,8 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          xcode-project use-profiles
-      - name: Set up Flutter dependencies
-        script: |
-          cd device_tracking
-          flutter packages pub get
-          flutter build ios --config-only
+          cd device_tracking/ios
+          xcode-project use-profiles --archive-method app-store --export-options-plist /Users/builder/export_options.plist
       - name: Build iOS IPA for App Store
         script: |
           cd device_tracking

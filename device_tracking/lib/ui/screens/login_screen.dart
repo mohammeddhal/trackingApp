@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/services_provider.dart';
-import 'package:device_tracking/l10n/generated/app_localizations.dart';
-import '../../models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -34,46 +31,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _passwordController.text.trim(),
       );
       // GoRouter will automatically redirect to home if auth state changes
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
+      String msg;
+      switch (e.code) {
+        case 'user-not-found':
+        case 'wrong-password':
+        case 'invalid-credential':
+          msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+          break;
+        case 'invalid-email':
+          msg = 'صيغة البريد الإلكتروني غير صالحة.';
+          break;
+        case 'user-disabled':
+          msg = 'تم تعطيل هذا الحساب. يرجى التواصل مع الإدارة.';
+          break;
+        case 'network-request-failed':
+          msg = 'فشل الاتصال بالإنترنت، يرجى التحقق من الشبكة.';
+          break;
+        case 'too-many-requests':
+          msg = 'تم حظر المحاولات مؤقتاً بسبب تكرار المحاولة، يرجى الانتظار قليلاً.';
+          break;
+        default:
+          msg = e.message ?? 'فشل تسجيل الدخول. يرجى التأكد من البيانات.';
+      }
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = msg;
       });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _quickLogin() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final authService = ref.read(authServiceProvider);
-      final email = 'admin@alwafa.com';
-      final password = 'password123';
-      try {
-        await authService.signInWithEmailAndPassword(email, password);
-      } catch (e) {
-        // If user doesn't exist, create it!
-        final cred = await authService.createUserWithEmailAndPassword(email, password);
-        if (cred.user != null) {
-          final firestore = ref.read(firestoreServiceProvider);
-          await firestore.createUserDocument(UserModel(
-            id: cred.user!.uid,
-            name: 'Admin User',
-            role: 'admin',
-          ));
-        }
-      }
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = 'حدث خطأ غير متوقع: $e';
       });
     } finally {
       if (mounted) {
@@ -176,25 +162,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : const Text(
                               'دخول (Login)',
                               style: TextStyle(fontSize: 18),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 50,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.grey),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: _isLoading ? null : _quickLogin,
-                      child: _isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text(
-                              'دخول سريع للتجربة (Admin Login Bypass)',
-                              style: TextStyle(fontSize: 16, color: Colors.grey),
                             ),
                     ),
                   ),

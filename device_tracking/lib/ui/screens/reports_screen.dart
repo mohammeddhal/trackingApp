@@ -94,7 +94,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
     final ordersAsync = ref.watch(ordersProvider);
-    final branchesAsync = ref.watch(branchesProvider);
     
     return Scaffold(
       appBar: AppBar(

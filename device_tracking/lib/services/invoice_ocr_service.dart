@@ -4,6 +4,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 class ExtractedInvoiceData {
   final String? serviceTicket;
   final String? branchName;
+  final String? branchCode;
   final String? customerName;
   final String? customerPhone;
   final String? deviceName;
@@ -18,6 +19,7 @@ class ExtractedInvoiceData {
   ExtractedInvoiceData({
     this.serviceTicket,
     this.branchName,
+    this.branchCode,
     this.customerName,
     this.customerPhone,
     this.deviceName,
@@ -124,8 +126,42 @@ class InvoiceOcrService {
       }
     }
 
-    // 2. Branch
-    branchName = findValue(['Branch', 'الفرع', 'المتجر', 'Store']);
+    // 2. Branch & Branch Code (e.g. 9551, طويق, الريم بلازا)
+    branchName = findValue([
+      'Branch Name',
+      'Branch',
+      'اسم الفرع',
+      'الفرع',
+      'فرع',
+      'Store Name',
+      'Store',
+      'اسم المتجر',
+      'المتجر',
+      'Store No',
+      'Store #',
+      'Branch No',
+      'Branch #',
+      'رقم الفرع',
+      'كود الفرع',
+    ]);
+
+    String? branchCode;
+    // Check if 4-digit code is inside branchName
+    if (branchName != null) {
+      final codeMatch = RegExp(r'\b(\d{4})\b').firstMatch(branchName);
+      if (codeMatch != null) {
+        branchCode = codeMatch.group(1);
+      }
+    }
+
+    // Also look for patterns like "Store: 9551" or "Branch 9551" or "Store #9551"
+    if (branchCode == null) {
+      final codeRegex = RegExp(r'(?:Branch|Store|الفرع|المتجر|فرع)\s*[:#\-\s]?\s*(\d{4})\b', caseSensitive: false);
+      final m = codeRegex.firstMatch(rawText);
+      if (m != null) {
+        branchCode = m.group(1);
+      }
+    }
 
     // 3. Customer name & phone
     customerName = findValue(['Customer name', 'Customer', 'العميل', 'اسم العميل']);
@@ -217,6 +253,7 @@ class InvoiceOcrService {
     return ExtractedInvoiceData(
       serviceTicket: serviceTicket,
       branchName: branchName,
+      branchCode: branchCode,
       customerName: customerName,
       customerPhone: customerPhone,
       deviceName: deviceName,

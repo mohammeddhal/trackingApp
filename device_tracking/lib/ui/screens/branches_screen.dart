@@ -20,8 +20,7 @@ class _BranchesScreenState extends ConsumerState<BranchesScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      final firestoreService = ref.read(firestoreServiceProvider);
-      // Wait, firestoreService might not have a generic add method for branches, let's just use FirebaseFirestore directly
+      // Direct FirebaseFirestore call
       await FirebaseFirestore.instance.collection('branches').add({
         'name': _nameController.text.trim(),
         'code': _codeController.text.trim(),

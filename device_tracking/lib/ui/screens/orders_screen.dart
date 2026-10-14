@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_tracking/l10n/generated/app_localizations.dart';
 import '../../providers/order_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/order_model.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:go_router/go_router.dart';
@@ -19,6 +20,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    final currentUser = ref.watch(currentUserModelProvider).value;
     final ordersAsync = ref.watch(ordersProvider);
 
     return Scaffold(
@@ -50,7 +52,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         color: Theme.of(context).scaffoldBackgroundColor,
         child: ordersAsync.when(
           data: (orders) {
-            final filteredOrders = orders.where((order) {
+            // Filter orders by assigned branches if staff user
+            List<OrderModel> branchOrders = orders;
+            if (currentUser != null && !currentUser.isAdmin) {
+              final assigned = currentUser.assignedBranchIds ?? [];
+              branchOrders = orders.where((order) => assigned.contains(order.branchId)).toList();
+            }
+
+            final filteredOrders = branchOrders.where((order) {
               return order.orderNumber.contains(_searchQuery) ||
                   order.imeiOrSerial.contains(_searchQuery) ||
                   (order.serviceCenterOrderNumber != null && order.serviceCenterOrderNumber!.contains(_searchQuery)) ||

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:device_tracking/l10n/generated/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../providers/branch_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../models/branch.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../services/notification_service.dart';
 import '../../services/invoice_ocr_service.dart';
@@ -44,12 +46,26 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
   };
 
   String? _selectedBranch;
+  String? _branchAlertMessage;
+  bool _isBranchMissing = false;
   String? _selectedDeviceType;
   String? _selectedManufacturerDropdown;
   bool _isLoading = false;
   bool _isScanningInvoice = false;
   String? _visualInspectionData;
   DateTime _receivedDate = DateTime.now();
+
+  String _normArabic(String s) {
+    return s
+        .toLowerCase()
+        .replaceAll(RegExp(r'[أإآ]'), 'ا')
+        .replaceAll('ة', 'ه')
+        .replaceAll('ى', 'ي')
+        .replaceAll(RegExp(r'[\u064B-\u065F]'), '')
+        .replaceAll(RegExp(r'[^a-zA-Z0-9\u0600-\u06FF]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
 
   final List<String> _deviceTypes = [
     'mobile',
@@ -189,37 +205,93 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
       int fieldsCount = 0;
 
       // 11. Smart Branch Matching across entire invoice text
-      final branches = ref.read(branchesProvider).value ?? [];
-      String? matchedBranchId;
-      String? matchedBranchName;
-      final fullTextLower = '${extracted.branchName ?? ''} ${extracted.rawText}'.toLowerCase();
+      final allBranches = ref.read(branchesProvider).value ?? [];
+      final currentUser = ref.read(currentUserModelProvider).value;
 
-      for (final b in branches) {
-        final bName = b.name.trim();
-        if (bName.isEmpty) continue;
-        final bNameLower = bName.toLowerCase();
+      final allowedBranches = (currentUser != null && !currentUser.isAdmin && currentUser.assignedBranchIds != null && currentUser.assignedBranchIds!.isNotEmpty)
+          ? allBranches.where((b) => currentUser.assignedBranchIds!.contains(b.id)).toList()
+          : allBranches;
 
-        // Direct containment
-        if (fullTextLower.contains(bNameLower)) {
-          matchedBranchId = b.id;
-          matchedBranchName = b.name;
-          break;
+      final fullRaw = '${extracted.branchName ?? ''} ${extracted.branchCode ?? ''} ${extracted.rawText}';
+      final normFull = _normArabic(fullRaw);
+
+      Branch? matchedBranch;
+      Branch? matchedInAll;
+
+      bool isBranchMatch(Branch b) {
+        // Priority 1: Match 4-digit branch code (e.g. 9551)
+        final code = b.code.trim();
+        if (code.isNotEmpty) {
+          if (extracted.branchCode == code) return true;
+          final codeRegex = RegExp(r'\b' + RegExp.escape(code) + r'\b');
+          if (codeRegex.hasMatch(extracted.rawText) || normFull.contains(_normArabic(code))) {
+            return true;
+          }
         }
 
-        // Clean common prefixes/suffixes and check keywords
-        final cleanWords = bNameLower
-            .split(RegExp(r'[\s\-_/]+'))
-            .where((w) => w.length >= 3 && !['فرع', 'محل', 'متجر', 'branch', 'store', 'hypermarket', 'supermarket', 'nesto', 'هايبر'].contains(w))
-            .toList();
+        // Check if b.name contains 4 digits (e.g. "فرع 9551" or "طويق 9551")
+        final fourDigitsInName = RegExp(r'\b(\d{4})\b').firstMatch(b.name)?.group(1);
+        if (fourDigitsInName != null && RegExp(r'\b' + fourDigitsInName + r'\b').hasMatch(extracted.rawText)) {
+          return true;
+        }
 
-        for (final word in cleanWords) {
-          if (fullTextLower.contains(word)) {
-            matchedBranchId = b.id;
-            matchedBranchName = b.name;
+        // Priority 2: Match branch name (e.g. طويق, الريم بلازا, etc.)
+        final normName = _normArabic(b.name);
+        if (normName.isNotEmpty) {
+          if (normFull.contains(normName)) return true;
+
+          final cleanWords = normName
+              .split(' ')
+              .where((w) => w.length >= 3 && !['فرع', 'محل', 'متجر', 'شركة', 'branch', 'store', 'hypermarket', 'supermarket', 'nesto', 'هايبر', 'بنده', 'لولو'].contains(w))
+              .toList();
+
+          if (cleanWords.isNotEmpty && cleanWords.every((w) => normFull.contains(w))) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      // Check allowed branches first
+      for (final b in allowedBranches) {
+        if (isBranchMatch(b)) {
+          matchedBranch = b;
+          break;
+        }
+      }
+
+      // If not in allowed branches, check all branches
+      if (matchedBranch == null) {
+        for (final b in allBranches) {
+          if (isBranchMatch(b)) {
+            matchedInAll = b;
             break;
           }
         }
-        if (matchedBranchId != null) break;
+      }
+
+      String? matchedBranchId;
+      String? matchedBranchName;
+      String? branchWarningNotice;
+
+      if (matchedBranch != null) {
+        matchedBranchId = matchedBranch.id;
+        matchedBranchName = matchedBranch.name;
+        _branchAlertMessage = null;
+        _isBranchMissing = false;
+      } else if (matchedInAll != null) {
+        _selectedBranch = null;
+        _isBranchMissing = false;
+        _branchAlertMessage = 'الفرع الموجود بالفاتورة (${matchedInAll.name}) غير مخصص لحسابك!';
+        branchWarningNotice = _branchAlertMessage;
+      } else {
+        _selectedBranch = null;
+        _isBranchMissing = true;
+        final detected = (extracted.branchName != null && extracted.branchName!.isNotEmpty)
+            ? extracted.branchName!
+            : (extracted.branchCode != null ? 'كود: ${extracted.branchCode}' : '');
+        _branchAlertMessage = 'الفرع ${detected.isNotEmpty ? "($detected) " : ""}غير مضاف في قائمة الفروع! يرجى إضافة الفرع في النظام أولاً أو اختياره يدوياً.';
+        branchWarningNotice = _branchAlertMessage;
       }
 
       setState(() {
@@ -304,17 +376,55 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
         if (matchedBranchId != null) {
           _selectedBranch = matchedBranchId;
           fieldsCount++;
+        } else {
+          _selectedBranch = null;
         }
       });
 
       if (mounted) {
-        final branchMsg = matchedBranchName != null ? ' (تم تحديد: $matchedBranchName)' : '';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.green.shade700,
-            content: Text('تم استخراج $fieldsCount حقل من الفاتورة$branchMsg وتعبئتها بنجاح! 🎉'),
-          ),
-        );
+        if (matchedBranchName != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 4),
+              backgroundColor: Colors.green.shade700,
+              content: Text('تم استخراج $fieldsCount حقل من الفاتورة (تم تحديد الفرع: $matchedBranchName) بنجاح! 🎉'),
+            ),
+          );
+        } else if (_isBranchMissing) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 7),
+              backgroundColor: Colors.orange.shade900,
+              content: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 28),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _branchAlertMessage ?? 'الفرع غير مضاف في قائمة الفروع! يرجى إضافته.',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        } else if (branchWarningNotice != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 6),
+              backgroundColor: Colors.red.shade800,
+              content: Text('⚠️ $branchWarningNotice'),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.green.shade700,
+              content: Text('تم استخراج $fieldsCount حقل من الفاتورة بنجاح! يرجى تحديد الفرع يدوياً.'),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -435,6 +545,7 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    final currentUser = ref.watch(currentUserModelProvider).value;
     final branchesAsync = ref.watch(branchesProvider);
 
     return Scaffold(
@@ -525,12 +636,82 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
                       const SizedBox(height: 16),
                       branchesAsync.when(
                         data: (branches) {
-                          return DropdownButtonFormField<String>(
-                            decoration: InputDecoration(labelText: loc.branch),
-                            value: _selectedBranch,
-                            items: branches.map((b) => DropdownMenuItem(value: b.id, child: Text(b.name))).toList(),
-                            onChanged: (val) => setState(() => _selectedBranch = val),
-                            validator: (val) => val == null ? loc.requiredField : null,
+                          final allowedBranches = (currentUser != null && !currentUser.isAdmin && currentUser.assignedBranchIds != null && currentUser.assignedBranchIds!.isNotEmpty)
+                              ? branches.where((b) => currentUser.assignedBranchIds!.contains(b.id)).toList()
+                              : branches;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              DropdownButtonFormField<String>(
+                                decoration: InputDecoration(
+                                  labelText: loc.branch,
+                                  helperText: (currentUser != null && !currentUser.isAdmin)
+                                      ? 'الفروع المخصصة لحسابك فقط'
+                                      : null,
+                                ),
+                                value: allowedBranches.any((b) => b.id == _selectedBranch) ? _selectedBranch : null,
+                                items: allowedBranches.map((b) => DropdownMenuItem(
+                                  value: b.id, 
+                                  child: Text('${b.name} (${b.code})'),
+                                )).toList(),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _selectedBranch = val;
+                                    _branchAlertMessage = null;
+                                    _isBranchMissing = false;
+                                  });
+                                },
+                                validator: (val) => val == null ? loc.requiredField : null,
+                              ),
+                              if (_branchAlertMessage != null) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade50,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.amber.shade600, width: 1.5),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900, size: 24),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _branchAlertMessage!,
+                                              style: TextStyle(
+                                                color: Colors.amber.shade900,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                            if (_isBranchMissing && (currentUser?.isAdmin ?? false)) ...[
+                                              const SizedBox(height: 6),
+                                              TextButton.icon(
+                                                style: TextButton.styleFrom(
+                                                  padding: EdgeInsets.zero,
+                                                  minimumSize: const Size(50, 30),
+                                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  foregroundColor: Colors.indigo.shade800,
+                                                ),
+                                                icon: const Icon(Icons.add_business, size: 18),
+                                                label: const Text('الانتقال لإضافة الفرع الآن', style: TextStyle(fontWeight: FontWeight.bold)),
+                                                onPressed: () => context.push('/branches'),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
                           );
                         },
                         loading: () => const Center(child: CircularProgressIndicator()),

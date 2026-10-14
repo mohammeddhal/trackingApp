@@ -77,9 +77,36 @@ workflows:
           keychain add-certificates
       - name: Build iOS IPA for App Store
         script: |
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number --bundle-id "com.alwafa.deviceTracking" 2>/dev/null || echo "1")
+          if ! [[ "$LATEST_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            LATEST_BUILD_NUMBER=1
+          fi
+
+          CM_BN=${BUILD_NUMBER:-2}
+          if ! [[ "$CM_BN" =~ ^[0-9]+$ ]]; then
+            CM_BN=2
+          fi
+
+          if [ "$CM_BN" -gt "$LATEST_BUILD_NUMBER" ]; then
+            NEXT_BUILD_NUMBER=$CM_BN
+          else
+            NEXT_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          fi
+
+          if [ "$NEXT_BUILD_NUMBER" -le 1 ]; then
+            NEXT_BUILD_NUMBER=2
+          fi
+
+          echo "========================================="
+          echo "Previous TestFlight Build Number: $LATEST_BUILD_NUMBER"
+          echo "Codemagic Build Index: $CM_BN"
+          echo "Calculated New Build Number: $NEXT_BUILD_NUMBER"
+          echo "========================================="
+
           cd device_tracking
-          flutter build ios --release --no-codesign
+          flutter build ios --release --no-codesign --build-number=$NEXT_BUILD_NUMBER
           cd ios
+          agvtool new-version -all $NEXT_BUILD_NUMBER || true
           xcode-project use-profiles --archive-method app-store --export-options-plist /Users/builder/export_options.plist --code-signing-setup-verbose-logging
           xcode-project build-ipa \
             --workspace Runner.xcworkspace \

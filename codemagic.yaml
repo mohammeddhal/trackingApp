@@ -67,9 +67,12 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
+          python3 -c "import base64; open('/Users/builder/cert_key', 'wb').write(base64.b64decode(open('$CM_BUILD_DIR/device_tracking/ios/certs/cert_key.b64').read().strip()))"
+          chmod 600 /Users/builder/cert_key
           app-store-connect fetch-signing-files "com.alwafa.deviceTracking" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --certificate-key=@file:/Users/builder/cert_key
           keychain add-certificates
       - name: Build iOS IPA for App Store
         script: |

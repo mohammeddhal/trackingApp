@@ -83,12 +83,14 @@ workflows:
           xcode-project use-profiles --archive-method app-store --export-options-plist /Users/builder/export_options.plist --code-signing-setup-verbose-logging
           xcode-project build-ipa \
             --workspace Runner.xcworkspace \
-            --scheme Runner
+            --scheme Runner \
+            --ipa-directory /Users/builder/clone/build/ios/ipa
     artifacts:
-      - build/ios/ipa/*.ipa
-      - device_tracking/build/ios/ipa/*.ipa
       - /Users/builder/clone/build/ios/ipa/*.ipa
-      - /Users/builder/clone/device_tracking/build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa
+      - device_tracking/ios/build/ios/ipa/*.ipa
+      - device_tracking/build/ios/ipa/*.ipa
+      - "**/*.ipa"
     publishing:
       app_store_connect:
         auth: integration

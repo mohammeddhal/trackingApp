@@ -30,6 +30,9 @@ class OrderModel {
   final String? maintenancePdfUrl;
   final String? visualInspectionData;
   final DateTime? receivedFromMaintenanceDate;
+  final String? branchName;
+  final String? createdBy;
+  final String? createdByName;
 
   OrderModel({
     required this.id,
@@ -61,6 +64,9 @@ class OrderModel {
     this.maintenancePdfUrl,
     this.visualInspectionData,
     this.receivedFromMaintenanceDate,
+    this.branchName,
+    this.createdBy,
+    this.createdByName,
   });
 
   factory OrderModel.fromMap(Map<String, dynamic> map, String documentId) {
@@ -95,6 +101,9 @@ class OrderModel {
       maintenancePdfUrl: map['maintenancePdfUrl'],
       visualInspectionData: map['visualInspectionData'],
       receivedFromMaintenanceDate: (map['receivedFromMaintenanceDate'] as Timestamp?)?.toDate(),
+      branchName: map['branchName'],
+      createdBy: map['createdBy'],
+      createdByName: map['createdByName'],
     );
   }
 
@@ -128,6 +137,9 @@ class OrderModel {
       if (maintenancePdfUrl != null) 'maintenancePdfUrl': maintenancePdfUrl,
       if (visualInspectionData != null) 'visualInspectionData': visualInspectionData,
       if (receivedFromMaintenanceDate != null) 'receivedFromMaintenanceDate': receivedFromMaintenanceDate,
+      if (branchName != null) 'branchName': branchName,
+      if (createdBy != null) 'createdBy': createdBy,
+      if (createdByName != null) 'createdByName': createdByName,
     };
   }
 

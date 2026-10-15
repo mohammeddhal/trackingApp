@@ -56,7 +56,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             List<OrderModel> branchOrders = orders;
             if (currentUser != null && !currentUser.isAdmin) {
               final assigned = currentUser.assignedBranchIds ?? [];
-              branchOrders = orders.where((order) => assigned.contains(order.branchId)).toList();
+              branchOrders = orders.where((order) {
+                if (assigned.contains(order.branchId)) return true;
+                if (order.createdBy != null && order.createdBy == currentUser.id) return true;
+                return false;
+              }).toList();
             }
 
             final filteredOrders = branchOrders.where((order) {
@@ -268,9 +272,28 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    'رقم الطلب: ${order.orderNumber}',
-                                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    children: [
+                                      Text(
+                                        'رقم الطلب: ${order.orderNumber}',
+                                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.indigo.shade50,
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: Colors.indigo.shade200, width: 0.8),
+                                        ),
+                                        child: Text(
+                                          order.branchName ?? order.branchId,
+                                          style: TextStyle(color: Colors.indigo.shade800, fontSize: 10, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   Row(

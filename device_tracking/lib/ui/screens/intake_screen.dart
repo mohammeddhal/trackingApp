@@ -47,7 +47,8 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
 
   String? _selectedBranch;
   String? _branchAlertMessage;
-  bool _isBranchMissing = false;
+  bool _isManualBranch = false;
+  final _manualBranchController = TextEditingController();
   String? _selectedDeviceType;
   String? _selectedManufacturerDropdown;
   bool _isLoading = false;
@@ -109,6 +110,11 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
         }
       }
       _selectedBranch = o.branchId;
+      if (o.branchName != null && o.branchName!.isNotEmpty) {
+        _manualBranchController.text = o.branchName!;
+      } else {
+        _manualBranchController.text = o.branchId;
+      }
       _selectedDeviceType = o.deviceType;
       _receivedDate = o.receivedFromCustomerDate;
       _visualInspectionData = o.visualInspectionData;
@@ -120,6 +126,21 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
         _manufacturerController.text = o.manufacturer;
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _orderNumberController.dispose();
+    _manufacturerController.dispose();
+    _productNameController.dispose();
+    _colorController.dispose();
+    _imeiController.dispose();
+    _problemController.dispose();
+    _conditionController.dispose();
+    _delivererController.dispose();
+    _intakeNotesController.dispose();
+    _manualBranchController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickReceivedDate() async {
@@ -272,26 +293,32 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
 
       String? matchedBranchId;
       String? matchedBranchName;
-      String? branchWarningNotice;
+
+      final detectedBranch = (extracted.branchName != null && extracted.branchName!.isNotEmpty)
+          ? extracted.branchName!
+          : (extracted.branchCode != null && extracted.branchCode!.isNotEmpty ? extracted.branchCode! : '');
 
       if (matchedBranch != null) {
         matchedBranchId = matchedBranch.id;
         matchedBranchName = matchedBranch.name;
-        _branchAlertMessage = null;
-        _isBranchMissing = false;
+        _isManualBranch = false;
+        _manualBranchController.text = matchedBranch.name;
+        _branchAlertMessage = 'تم التعرف على الفرع وتحديده تلقائياً: ${matchedBranch.name} (${matchedBranch.code})';
       } else if (matchedInAll != null) {
-        _selectedBranch = null;
-        _isBranchMissing = false;
-        _branchAlertMessage = 'الفرع الموجود بالفاتورة (${matchedInAll.name}) غير مخصص لحسابك!';
-        branchWarningNotice = _branchAlertMessage;
+        matchedBranchId = null;
+        matchedBranchName = null;
+        _manualBranchController.text = matchedInAll.name;
+        _branchAlertMessage = 'الفرع المكتشف بالفاتورة (${matchedInAll.name}) غير مسند لحسابك في القائمة. تم إدراجه في خانة الكتابة اليدوية.';
       } else {
-        _selectedBranch = null;
-        _isBranchMissing = true;
-        final detected = (extracted.branchName != null && extracted.branchName!.isNotEmpty)
-            ? extracted.branchName!
-            : (extracted.branchCode != null ? 'كود: ${extracted.branchCode}' : '');
-        _branchAlertMessage = 'الفرع ${detected.isNotEmpty ? "($detected) " : ""}غير مضاف في قائمة الفروع! يرجى إضافة الفرع في النظام أولاً أو اختياره يدوياً.';
-        branchWarningNotice = _branchAlertMessage;
+        matchedBranchId = null;
+        matchedBranchName = null;
+
+        if (detectedBranch.isNotEmpty) {
+          _manualBranchController.text = detectedBranch;
+          _branchAlertMessage = 'تم قراءة اسم الفرع من الفاتورة: "$detectedBranch". يمكنك اعتماده ككتابة يدوية أو اختيار الفرع المطابق من القائمة.';
+        } else {
+          _branchAlertMessage = 'لم يتم التعرف على الفرع تلقائياً من الفاتورة. يمكنك اختياره من القائمة أو كتابة اسمه يدوياً.';
+        }
       }
 
       setState(() {
@@ -375,6 +402,7 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
         // 11. Branch
         if (matchedBranchId != null) {
           _selectedBranch = matchedBranchId;
+          _isManualBranch = false;
           fieldsCount++;
         } else {
           _selectedBranch = null;
@@ -387,41 +415,15 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
             SnackBar(
               duration: const Duration(seconds: 4),
               backgroundColor: Colors.green.shade700,
-              content: Text('تم استخراج $fieldsCount حقل من الفاتورة (تم تحديد الفرع: $matchedBranchName) بنجاح! 🎉'),
-            ),
-          );
-        } else if (_isBranchMissing) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              duration: const Duration(seconds: 7),
-              backgroundColor: Colors.orange.shade900,
-              content: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 28),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _branchAlertMessage ?? 'الفرع غير مضاف في قائمة الفروع! يرجى إضافته.',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        } else if (branchWarningNotice != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              duration: const Duration(seconds: 6),
-              backgroundColor: Colors.red.shade800,
-              content: Text('⚠️ $branchWarningNotice'),
+              content: Text('تم استخراج $fieldsCount حقل من الفاتورة (تم تحديد فرع $matchedBranchName تلقائياً) 🎉'),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              backgroundColor: Colors.green.shade700,
-              content: Text('تم استخراج $fieldsCount حقل من الفاتورة بنجاح! يرجى تحديد الفرع يدوياً.'),
+              duration: const Duration(seconds: 4),
+              backgroundColor: Colors.indigo.shade700,
+              content: Text('تم استخراج $fieldsCount حقل من الفاتورة بنجاح. يمكنك اختيار الفرع من القائمة أو كتابته يدوياً.'),
             ),
           );
         }
@@ -486,10 +488,45 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
 
     setState(() => _isLoading = true);
     try {
+      final allBranches = ref.read(branchesProvider).value ?? [];
+      final currentUser = ref.read(currentUserModelProvider).value;
+
+      String finalBranchId;
+      String finalBranchName;
+
+      if (_isManualBranch) {
+        final manualName = _manualBranchController.text.trim();
+        if (manualName.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('الرجاء كتابة اسم الفرع أو الاختيار من القائمة')),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+        finalBranchId = manualName;
+        finalBranchName = manualName;
+      } else {
+        if (_selectedBranch == null || _selectedBranch!.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('الرجاء اختيار الفرع أو كتابته يدوياً')),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+        final b = allBranches.firstWhere(
+          (item) => item.id == _selectedBranch,
+          orElse: () => Branch(id: _selectedBranch!, name: _selectedBranch!, code: '', isActive: true),
+        );
+        finalBranchId = b.id;
+        finalBranchName = b.name;
+      }
+
       final selectedAccessories = _accessories.entries.where((e) => e.value).map((e) => e.key).toList();
       
-      final data = {
-        'branchId': _selectedBranch,
+      final data = <String, dynamic>{
+        'branchId': finalBranchId,
+        'branchName': finalBranchName,
+        'isManualBranch': _isManualBranch,
         'orderNumber': _orderNumberController.text.trim(),
         'deviceType': _selectedDeviceType,
         'manufacturer': finalManufacturer,
@@ -504,6 +541,8 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
         'visualInspectionData': _visualInspectionData,
         'updatedAt': FieldValue.serverTimestamp(),
         'receivedFromCustomerDate': _receivedDate,
+        if (currentUser != null) 'createdBy': currentUser.id,
+        if (currentUser != null) 'createdByName': currentUser.name,
       };
 
       String orderId;
@@ -642,110 +681,167 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
                               ? branches.where((b) => assignedIds.contains(b.id)).toList()
                               : branches;
 
-                          if (isStaff && allowedBranches.isEmpty) {
-                            return Container(
-                              padding: const EdgeInsets.all(16),
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.red.shade300, width: 1.5),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Mode Switcher (List vs Manual)
+                              Row(
                                 children: [
-                                  Icon(Icons.error_outline, color: Colors.red.shade800, size: 28),
-                                  const SizedBox(width: 12),
                                   Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'تنبيه: لم يتم تعيين أي فروع لحسابك بعد!',
-                                          style: TextStyle(
-                                            color: Colors.red.shade900,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
+                                    child: InkWell(
+                                      onTap: () => setState(() {
+                                        _isManualBranch = false;
+                                        _branchAlertMessage = null;
+                                      }),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 9),
+                                        decoration: BoxDecoration(
+                                          color: !_isManualBranch ? Theme.of(context).primaryColor : Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: !_isManualBranch ? Theme.of(context).primaryColor : Colors.grey.shade300,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'بصفتك مسؤول استلام، يجب على مدير النظام تخصيص الفروع التابعة لك في لوحة الإدارة حتى تتمكن من استلام ومتابعة الأجهزة.',
-                                          style: TextStyle(color: Colors.red.shade800, fontSize: 12),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.list_alt,
+                                              size: 18,
+                                              color: !_isManualBranch ? Colors.white : Colors.grey.shade700,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'اختيار من القائمة',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: !_isManualBranch ? Colors.white : Colors.grey.shade700,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => setState(() {
+                                        _isManualBranch = true;
+                                        _branchAlertMessage = null;
+                                      }),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 9),
+                                        decoration: BoxDecoration(
+                                          color: _isManualBranch ? Theme.of(context).primaryColor : Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: _isManualBranch ? Theme.of(context).primaryColor : Colors.grey.shade300,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.edit_note,
+                                              size: 18,
+                                              color: _isManualBranch ? Colors.white : Colors.grey.shade700,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'كتابة اسم الفرع يدوياً',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: _isManualBranch ? Colors.white : Colors.grey.shade700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            );
-                          }
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              DropdownButtonFormField<String>(
-                                decoration: InputDecoration(
-                                  labelText: loc.branch,
-                                  helperText: isStaff
-                                      ? 'الفروع المخصصة لحسابك فقط (${allowedBranches.length} فرع)'
-                                      : null,
+                              const SizedBox(height: 12),
+                              if (!_isManualBranch) ...[
+                                if (isStaff && allowedBranches.isEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.amber.shade300),
+                                    ),
+                                    child: Text(
+                                      'تنبيه: لا توجد فروع مسندة لحسابك في القائمة حالياً. يمكنك استخدام "كتابة اسم الفرع يدوياً" أعلاه.',
+                                      style: TextStyle(color: Colors.amber.shade900, fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                DropdownButtonFormField<String>(
+                                  decoration: InputDecoration(
+                                    labelText: loc.branch,
+                                    helperText: isStaff
+                                        ? 'الفروع المعتمدة لحسابك (${allowedBranches.length} فرع)'
+                                        : 'اختر الفرع من قائمة الفروع المسجلة',
+                                  ),
+                                  value: allowedBranches.any((b) => b.id == _selectedBranch) ? _selectedBranch : null,
+                                  items: allowedBranches.map((b) => DropdownMenuItem(
+                                    value: b.id, 
+                                    child: Text('${b.name} (${b.code})'),
+                                  )).toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _selectedBranch = val;
+                                      _branchAlertMessage = null;
+                                    });
+                                  },
+                                  validator: (val) => !_isManualBranch && val == null ? loc.requiredField : null,
                                 ),
-                                value: allowedBranches.any((b) => b.id == _selectedBranch) ? _selectedBranch : null,
-                                items: allowedBranches.map((b) => DropdownMenuItem(
-                                  value: b.id, 
-                                  child: Text('${b.name} (${b.code})'),
-                                )).toList(),
-                                onChanged: (val) {
-                                  setState(() {
-                                    _selectedBranch = val;
-                                    _branchAlertMessage = null;
-                                    _isBranchMissing = false;
-                                  });
-                                },
-                                validator: (val) => val == null ? loc.requiredField : null,
-                              ),
+                              ] else ...[
+                                TextFormField(
+                                  controller: _manualBranchController,
+                                  decoration: InputDecoration(
+                                    labelText: 'اسم الفرع (كتابة يدوية)',
+                                    hintText: 'مثال: فرع طويق أو الظهران أو 9551',
+                                    prefixIcon: const Icon(Icons.store),
+                                    helperText: 'اكتب اسم الفرع مباشرة إذا كان مختلفاً أو غير مضاف بالقائمة',
+                                    suffixIcon: _manualBranchController.text.isNotEmpty
+                                        ? IconButton(
+                                            icon: const Icon(Icons.clear, size: 18),
+                                            onPressed: () => setState(() => _manualBranchController.clear()),
+                                          )
+                                        : null,
+                                  ),
+                                  validator: (val) => _isManualBranch && (val == null || val.trim().isEmpty) ? loc.requiredField : null,
+                                ),
+                              ],
                               if (_branchAlertMessage != null) ...[
                                 const SizedBox(height: 10),
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.amber.shade50,
+                                    color: Colors.indigo.shade50,
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.amber.shade600, width: 1.5),
+                                    border: Border.all(color: Colors.indigo.shade200),
                                   ),
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900, size: 24),
+                                      Icon(Icons.info_outline, color: Colors.indigo.shade800, size: 22),
                                       const SizedBox(width: 10),
                                       Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              _branchAlertMessage!,
-                                              style: TextStyle(
-                                                color: Colors.amber.shade900,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                            if (_isBranchMissing && (currentUser?.isAdmin ?? false)) ...[
-                                              const SizedBox(height: 6),
-                                              TextButton.icon(
-                                                style: TextButton.styleFrom(
-                                                  padding: EdgeInsets.zero,
-                                                  minimumSize: const Size(50, 30),
-                                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                  foregroundColor: Colors.indigo.shade800,
-                                                ),
-                                                icon: const Icon(Icons.add_business, size: 18),
-                                                label: const Text('الانتقال لإضافة الفرع الآن', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                onPressed: () => context.push('/branches'),
-                                              ),
-                                            ],
-                                          ],
+                                        child: Text(
+                                          _branchAlertMessage!,
+                                          style: TextStyle(
+                                            color: Colors.indigo.shade900,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ),
                                     ],

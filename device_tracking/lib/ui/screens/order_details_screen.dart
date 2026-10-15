@@ -567,11 +567,10 @@ class OrderDetailsScreen extends ConsumerWidget {
     final branchesAsync = ref.watch(branchesProvider);
     final branchName = branchesAsync.when(
       data: (branches) {
-        try {
-          return branches.firstWhere((b) => b.id == order.branchId).name;
-        } catch (_) {
-          return order.branchId;
-        }
+        final b = branches.where((b) => b.id == order.branchId).firstOrNull;
+        if (b != null) return '${b.name} (${b.code})';
+        if (order.branchName != null && order.branchName!.isNotEmpty) return order.branchName!;
+        return order.branchId;
       },
       loading: () => 'جاري التحميل...',
       error: (_, __) => order.branchId,

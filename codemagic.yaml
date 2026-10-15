@@ -7,13 +7,9 @@ workflows:
       flutter: default
       xcode: latest
       cocoapods: default
+    # Unsigned release IPA (trigger manually from Codemagic dashboard if needed)
     triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: 'main'
-          include: true
-          source: true
+      events: []
     scripts:
       - name: Disable SPM
         script: |

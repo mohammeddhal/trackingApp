@@ -34,6 +34,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isAuth && isLoggingIn) return '/';
       if (hasLanguage && isLanguageSelect) return isAuth ? '/' : '/login';
 
+      final userModel = ref.read(currentUserModelProvider).value;
+      const adminRoutes = ['/branches', '/staff', '/reports'];
+      if (adminRoutes.contains(state.matchedLocation) && userModel != null && !userModel.isAdmin) {
+        return '/';
+      }
+
       return null;
     },
     routes: [

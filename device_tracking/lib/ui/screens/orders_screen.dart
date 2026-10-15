@@ -66,9 +66,33 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                   order.productName.toLowerCase().contains(_searchQuery.toLowerCase());
             }).toList();
 
+            final isStaffWithoutBranches = currentUser != null && !currentUser.isAdmin && (currentUser.assignedBranchIds == null || currentUser.assignedBranchIds!.isEmpty);
+
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if (isStaffWithoutBranches)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber.shade400, width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.amber.shade900, size: 24),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'تنبيه: لم يتم تعيين أي فروع لحسابك حتى الآن. يرجى التواصل مع المدير لتحديد فروعك.',
+                            style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 _buildSection(
                   title: loc.pendingServiceCenterDelivery,
                   icon: Icons.local_shipping,

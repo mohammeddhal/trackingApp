@@ -75,7 +75,7 @@ class HomeScreen extends ConsumerWidget {
                       const SizedBox(height: 4),
                       if (user != null)
                         Text(
-                          'المستخدم: ${user.name} (${user.isAdmin ? 'مدير' : 'موظف'})${user.region != null ? ' - ${user.region}' : ''}',
+                          'المستخدم: ${user.name} (${user.isAdmin ? 'مدير النظام' : 'مسؤول'})${user.region != null ? ' - ${user.region}' : ''}',
                           style: TextStyle(
                             color: Colors.grey.shade700,
                             fontWeight: FontWeight.w600,
@@ -117,7 +117,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       _buildDashboardCard(
                         context,
-                        title: 'إدارة ومتابعة الموظفين',
+                        title: 'إدارة ومتابعة المسؤولين',
                         icon: Icons.people_alt_rounded,
                         color: Colors.indigo,
                         onTap: () => context.push('/staff'),

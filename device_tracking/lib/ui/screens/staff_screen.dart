@@ -49,7 +49,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
             children: [
               Icon(Icons.person_add_alt_1, color: Colors.indigo),
               SizedBox(width: 8),
-              Text('إضافة موظف جديد'),
+              Text('إضافة مسؤول جديد'),
             ],
           ),
           content: SingleChildScrollView(
@@ -60,7 +60,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                 TextField(
                   controller: nameController,
                   decoration: const InputDecoration(
-                    labelText: 'اسم الموظف',
+                    labelText: 'اسم المسؤول',
                     hintText: 'مثال: أحمد العتيبي',
                     prefixIcon: Icon(Icons.person),
                   ),
@@ -98,7 +98,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
-                    labelText: 'المنطقة المسندة للموظف',
+                    labelText: 'المنطقة المسندة',
                     prefixIcon: Icon(Icons.location_on),
                   ),
                   value: selectedRegion,
@@ -115,8 +115,8 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                   ),
                   value: selectedRole,
                   items: const [
-                    DropdownMenuItem(value: 'staff', child: Text('موظف ميداني / فني (Staff)')),
-                    DropdownMenuItem(value: 'admin', child: Text('مشرف / مدير (Admin)')),
+                    DropdownMenuItem(value: 'staff', child: Text('مسؤول (استلام ومتابعة فروع محددة)')),
+                    DropdownMenuItem(value: 'admin', child: Text('مدير النظام (كامل الصلاحيات)')),
                   ],
                   onChanged: (val) {
                     if (val != null) setDialogState(() => selectedRole = val);
@@ -124,10 +124,42 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                 ),
                 if (branches.isNotEmpty) ...[
                   const SizedBox(height: 14),
-                  const Text('الفروع المخصصة للموظف (اختياري):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'الفروع المخصصة للمسؤول:',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      Row(
+                        children: [
+                          TextButton(
+                            style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(45, 26)),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedBranches.clear();
+                                selectedBranches.addAll(branches.map((b) => b.id));
+                              });
+                            },
+                            child: const Text('تحديد الكل', style: TextStyle(fontSize: 11)),
+                          ),
+                          const SizedBox(width: 4),
+                          TextButton(
+                            style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(35, 26)),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedBranches.clear();
+                              });
+                            },
+                            child: const Text('إلغاء', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Container(
-                    height: 130,
+                    height: 140,
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(8),
@@ -139,7 +171,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                         final isChecked = selectedBranches.contains(b.id);
                         return CheckboxListTile(
                           dense: true,
-                          title: Text(b.name, style: const TextStyle(fontSize: 13)),
+                          title: Text('${b.name} (${b.code})', style: const TextStyle(fontSize: 13)),
                           value: isChecked,
                           onChanged: (val) {
                             setDialogState(() {
@@ -153,6 +185,11 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                         );
                       },
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '* المسؤول سيتمكن فقط من استلام الأجهزة ومتابعة طلبات الفروع المحددة له أعلاه.',
+                    style: TextStyle(color: Colors.grey, fontSize: 11),
                   ),
                 ],
               ],
@@ -210,7 +247,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                           email: email,
                           role: selectedRole,
                           region: selectedRegion,
-                          assignedBranchIds: selectedBranches.isNotEmpty ? selectedBranches : null,
+                          assignedBranchIds: selectedBranches.isNotEmpty ? selectedBranches : [],
                           phone: phone.isNotEmpty ? phone : null,
                           isActive: true,
                           createdAt: DateTime.now(),
@@ -223,7 +260,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               backgroundColor: Colors.green,
-                              content: Text('تم إنشاء حساب الموظف بنجاح! 🎉'),
+                              content: Text('تم إنشاء حساب المسؤول بنجاح! 🎉'),
                             ),
                           );
                         }
@@ -244,7 +281,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                     },
               child: isSaving
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('حفظ وإنشاء الموظف'),
+                  : const Text('حفظ وإنشاء المسؤول'),
             ),
           ],
         ),
@@ -268,10 +305,11 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'اسم الموظف', prefixIcon: Icon(Icons.person)),
+                  decoration: const InputDecoration(labelText: 'اسم المسؤول', prefixIcon: Icon(Icons.person)),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -289,16 +327,86 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'الرتبة', prefixIcon: Icon(Icons.badge)),
+                  decoration: const InputDecoration(labelText: 'نوع الحساب / الصلاحية', prefixIcon: Icon(Icons.badge)),
                   value: selectedRole,
                   items: const [
-                    DropdownMenuItem(value: 'staff', child: Text('موظف (Staff)')),
-                    DropdownMenuItem(value: 'admin', child: Text('مدير (Admin)')),
+                    DropdownMenuItem(value: 'staff', child: Text('مسؤول (استلام ومتابعة فروع محددة)')),
+                    DropdownMenuItem(value: 'admin', child: Text('مدير النظام (كامل الصلاحيات)')),
                   ],
                   onChanged: (val) {
                     if (val != null) setDialogState(() => selectedRole = val);
                   },
                 ),
+                if (branches.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'الفروع المخصصة للمسؤول:',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      Row(
+                        children: [
+                          TextButton(
+                            style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(45, 26)),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedBranches.clear();
+                                selectedBranches.addAll(branches.map((b) => b.id));
+                              });
+                            },
+                            child: const Text('تحديد الكل', style: TextStyle(fontSize: 11)),
+                          ),
+                          const SizedBox(width: 4),
+                          TextButton(
+                            style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(35, 26)),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedBranches.clear();
+                              });
+                            },
+                            child: const Text('إلغاء', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    height: 140,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ListView.builder(
+                      itemCount: branches.length,
+                      itemBuilder: (context, idx) {
+                        final b = branches[idx];
+                        final isChecked = selectedBranches.contains(b.id);
+                        return CheckboxListTile(
+                          dense: true,
+                          title: Text('${b.name} (${b.code})', style: const TextStyle(fontSize: 13)),
+                          value: isChecked,
+                          onChanged: (val) {
+                            setDialogState(() {
+                              if (val == true) {
+                                selectedBranches.add(b.id);
+                              } else {
+                                selectedBranches.remove(b.id);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '* المسؤول سيتمكن فقط من استلام الأجهزة ومتابعة طلبات الفروع المحددة له أعلاه.',
+                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
+                ],
               ],
             ),
           ),
@@ -312,7 +420,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                   email: user.email,
                   role: selectedRole,
                   region: selectedRegion,
-                  assignedBranchIds: selectedBranches.isNotEmpty ? selectedBranches : null,
+                  assignedBranchIds: selectedBranches.isNotEmpty ? selectedBranches : [],
                   phone: phoneController.text.trim(),
                   isActive: user.isActive,
                   createdAt: user.createdAt,
@@ -321,7 +429,12 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                 await ref.read(firestoreServiceProvider).updateUser(updatedUser);
                 if (context.mounted) {
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث بيانات الموظف بنجاح')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: Colors.green.shade700,
+                      content: Text('تم تحديث بيانات المسؤول "${updatedUser.name}" بنجاح'),
+                    ),
+                  );
                 }
               },
               child: const Text('حفظ التعديلات'),
@@ -342,7 +455,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إدارة ومتابعة الموظفين'),
+        title: const Text('إدارة ومتابعة المسؤولين'),
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -350,7 +463,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
         foregroundColor: Colors.white,
         onPressed: () => _showAddStaffDialog(context, branches),
         icon: const Icon(Icons.person_add),
-        label: const Text('إضافة موظف جديد', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('إضافة مسؤول جديد', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: Column(
         children: [
@@ -362,7 +475,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
               children: [
                 TextField(
                   decoration: InputDecoration(
-                    hintText: 'بحث باسم الموظف أو البريد أو المنطقة...',
+                    hintText: 'بحث باسم المسؤول أو البريد أو المنطقة...',
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     fillColor: Colors.white,
@@ -420,7 +533,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                       children: [
                         Icon(Icons.people_outline, size: 64, color: Colors.grey),
                         SizedBox(height: 12),
-                        Text('لا يوجد موظفون مطابقون للبحث', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                        Text('لا يوجد مسؤولون مطابقون للبحث', style: TextStyle(color: Colors.grey, fontSize: 16)),
                       ],
                     ),
                   );
@@ -476,7 +589,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: Text(
-                                              user.isAdmin ? 'مدير' : 'موظف',
+                                              user.isAdmin ? 'مدير النظام' : 'مسؤول',
                                               style: TextStyle(
                                                 color: user.isAdmin ? Colors.deepPurple : Colors.indigo,
                                                 fontSize: 11,
@@ -541,6 +654,61 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                                 ),
                               ],
                             ),
+                            if (!user.isAdmin) ...[
+                              const SizedBox(height: 10),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.storefront, size: 16, color: Colors.indigo),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: (user.assignedBranchIds != null && user.assignedBranchIds!.isNotEmpty)
+                                        ? Wrap(
+                                            spacing: 6,
+                                            runSpacing: 4,
+                                            children: user.assignedBranchIds!.map((bId) {
+                                              final b = branches.firstWhere(
+                                                (item) => item.id == bId,
+                                                orElse: () => Branch(id: bId, name: 'فرع غير معروف', code: '', isActive: true),
+                                              );
+                                              return Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.indigo.shade50,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: Colors.indigo.shade200),
+                                                ),
+                                                child: Text(
+                                                  '${b.name} (${b.code})',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.indigo.shade900,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                          )
+                                        : const Text(
+                                            '⚠️ لم يتم تخصيص أي فروع بعد (لن يتمكن من استلام أو متابعة أجهزة حتى يتم تعيين فروع له)',
+                                            style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Icon(Icons.admin_panel_settings, size: 16, color: Colors.deepPurple.shade700),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'صلاحية كاملة على جميع الفروع والعمليات (Admin)',
+                                    style: TextStyle(color: Colors.deepPurple.shade700, fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
@@ -557,7 +725,7 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                                     final confirm = await showDialog<bool>(
                                       context: context,
                                       builder: (c) => AlertDialog(
-                                        title: const Text('حذف حساب الموظف'),
+                                        title: const Text('حذف حساب المسؤول'),
                                         content: Text('هل أنت متأكد من حذف حساب "${user.name}"؟'),
                                         actions: [
                                           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('إلغاء')),

@@ -6,7 +6,6 @@ import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../providers/order_provider.dart';
-import '../../providers/branch_provider.dart';
 import 'package:intl/intl.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {

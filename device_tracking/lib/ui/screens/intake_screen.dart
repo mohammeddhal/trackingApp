@@ -208,8 +208,8 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
       final allBranches = ref.read(branchesProvider).value ?? [];
       final currentUser = ref.read(currentUserModelProvider).value;
 
-      final allowedBranches = (currentUser != null && !currentUser.isAdmin && currentUser.assignedBranchIds != null && currentUser.assignedBranchIds!.isNotEmpty)
-          ? allBranches.where((b) => currentUser.assignedBranchIds!.contains(b.id)).toList()
+      final allowedBranches = (currentUser != null && !currentUser.isAdmin)
+          ? allBranches.where((b) => (currentUser.assignedBranchIds ?? []).contains(b.id)).toList()
           : allBranches;
 
       final fullRaw = '${extracted.branchName ?? ''} ${extracted.branchCode ?? ''} ${extracted.rawText}';
@@ -636,9 +636,50 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
                       const SizedBox(height: 16),
                       branchesAsync.when(
                         data: (branches) {
-                          final allowedBranches = (currentUser != null && !currentUser.isAdmin && currentUser.assignedBranchIds != null && currentUser.assignedBranchIds!.isNotEmpty)
-                              ? branches.where((b) => currentUser.assignedBranchIds!.contains(b.id)).toList()
+                          final isStaff = currentUser != null && !currentUser.isAdmin;
+                          final assignedIds = currentUser?.assignedBranchIds ?? [];
+                          final allowedBranches = isStaff
+                              ? branches.where((b) => assignedIds.contains(b.id)).toList()
                               : branches;
+
+                          if (isStaff && allowedBranches.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.red.shade300, width: 1.5),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.error_outline, color: Colors.red.shade800, size: 28),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'تنبيه: لم يتم تعيين أي فروع لحسابك بعد!',
+                                          style: TextStyle(
+                                            color: Colors.red.shade900,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'بصفتك مسؤول استلام، يجب على مدير النظام تخصيص الفروع التابعة لك في لوحة الإدارة حتى تتمكن من استلام ومتابعة الأجهزة.',
+                                          style: TextStyle(color: Colors.red.shade800, fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -646,8 +687,8 @@ class _IntakeScreenState extends ConsumerState<IntakeScreen> {
                               DropdownButtonFormField<String>(
                                 decoration: InputDecoration(
                                   labelText: loc.branch,
-                                  helperText: (currentUser != null && !currentUser.isAdmin)
-                                      ? 'الفروع المخصصة لحسابك فقط'
+                                  helperText: isStaff
+                                      ? 'الفروع المخصصة لحسابك فقط (${allowedBranches.length} فرع)'
                                       : null,
                                 ),
                                 value: allowedBranches.any((b) => b.id == _selectedBranch) ? _selectedBranch : null,

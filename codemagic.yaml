@@ -108,12 +108,15 @@ workflows:
             --workspace Runner.xcworkspace \
             --scheme Runner \
             --ipa-directory /Users/builder/clone/build/ios/ipa
+          cd /Users/builder/clone/build/ios/ipa
+          for f in *.ipa; do
+            if [ -f "$f" ] && [ "$f" != "DeviceTracking.ipa" ]; then
+              mv "$f" "DeviceTracking.ipa"
+            fi
+          done
+          ls -la /Users/builder/clone/build/ios/ipa
     artifacts:
       - /Users/builder/clone/build/ios/ipa/*.ipa
-      - build/ios/ipa/*.ipa
-      - device_tracking/ios/build/ios/ipa/*.ipa
-      - device_tracking/build/ios/ipa/*.ipa
-      - "**/*.ipa"
     publishing:
       app_store_connect:
         auth: integration
